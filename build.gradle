@@ -1,0 +1,19 @@
+apply plugin: 'java'
+
+repositories {
+    jcenter()
+}
+
+sourceCompatibility = 1.6
+targetCompatibility = 1.6
+
+group = 'com.wizzardo'
+version = '0.1-SNAPSHOT'
+
+ext {
+    descriptionString = 'Simple web-socket client'
+}
+apply from: 'gradle/sonatype.gradle'
+
+dependencies {
+}
