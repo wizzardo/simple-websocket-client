@@ -1,8 +1,5 @@
 package com.wizzardo.http.websocket;
 
-import com.wizzardo.tools.io.BoyerMoore;
-import com.wizzardo.tools.misc.Unchecked;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -19,6 +16,7 @@ import java.util.Map;
  * Date: 03.10.14
  */
 public class SimpleWebSocketClient extends Thread {
+    protected static final byte[] RNRN = "\r\n\r\n".getBytes(Charsets.UTF_8);
     protected InputStream in;
     protected OutputStream out;
     protected byte[] buffer = new byte[1024];
@@ -47,7 +45,7 @@ public class SimpleWebSocketClient extends Thread {
             try {
                 params.put(URLEncoder.encode(key, "utf-8"), URLEncoder.encode(value, "utf-8"));
             } catch (UnsupportedEncodingException e) {
-                throw Unchecked.rethrow(e);
+                throw new RuntimeException(e);
             }
             return this;
         }
@@ -117,16 +115,36 @@ public class SimpleWebSocketClient extends Thread {
         out.write(request.build().getBytes());
         out.flush();
 
-        BoyerMoore boyerMoore = new BoyerMoore("\r\n\r\n");
         int response = 0;
         while ((bufferOffset += in.read(buffer, bufferOffset, buffer.length - bufferOffset)) != -1) {
 //            System.out.println(new String(bytes, 0, r));
-            if ((response = boyerMoore.search(buffer, 0, bufferOffset)) >= 0)
+            if ((response = search(buffer, 0, bufferOffset, RNRN)) >= 0)
                 break;
         }
 
         System.out.println(new String(buffer, 0, response));
         bufferOffset = 0;
+    }
+
+    protected int search(byte[] src, int from, int to, byte[] needle) {
+        if (needle == null || needle.length == 0)
+            return -1;
+
+        int length = needle.length;
+        to = Math.min(to, src.length);
+        to -= needle.length;
+
+        outer:
+        for (int i = from; i <= to; i++) {
+            if (src[i] == needle[0]) {
+                for (int j = 1; j < length; j++) {
+                    if (src[i + j] != needle[j])
+                        continue outer;
+                }
+                return i;
+            }
+        }
+        return -1;
     }
 
     @Override

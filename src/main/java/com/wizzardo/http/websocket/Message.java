@@ -1,8 +1,9 @@
 package com.wizzardo.http.websocket;
 
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
+
+import static com.wizzardo.http.websocket.Charsets.UTF_8;
 
 /**
  * @author: wizzardo
@@ -41,7 +42,7 @@ public class Message {
     }
 
     public Message append(String s) {
-        return append(s.getBytes(StandardCharsets.UTF_8));
+        return append(s.getBytes(UTF_8));
     }
 
     public Message append(byte[] bytes) {
@@ -54,7 +55,7 @@ public class Message {
     }
 
     public String asString() {
-        return new String(asBytes(), StandardCharsets.UTF_8);
+        return new String(asBytes(), UTF_8);
     }
 
     public byte[] asBytes() {
