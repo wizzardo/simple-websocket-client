@@ -1,5 +1,6 @@
 package com.wizzardo.http.websocket;
 
+import javax.net.ssl.*;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -26,20 +27,17 @@ public class SimpleWebSocketClient extends Thread {
     protected Socket socket;
 
     public static class Request {
-        private URI uri;
+        protected URI uri;
 
         public Request(String url) throws URISyntaxException {
             URI u = new URI(url.trim());
-            if (u.getScheme().equals("wss"))
-                throw new IllegalArgumentException("wss not implemented yet");
-
-            if (!u.getScheme().equals("ws"))
-                throw new IllegalArgumentException("url must use ws scheme");
+            if (!u.getScheme().equalsIgnoreCase("ws") && !u.getScheme().equalsIgnoreCase("wss"))
+                throw new IllegalArgumentException("url must use ws or wss scheme");
             uri = u;
         }
 
-        private Map<String, String> params = new HashMap<>();
-        private Map<String, String> headers = new HashMap<>();
+        private Map<String, String> params = new HashMap<String, String>();
+        private Map<String, String> headers = new HashMap<String, String>();
 
         public Request param(String key, String value) {
             try {
@@ -95,7 +93,27 @@ public class SimpleWebSocketClient extends Thread {
         }
 
         public int port() {
-            return uri.getPort();
+            int port = uri.getPort();
+            if (port != -1)
+                return port;
+
+            if (isSecure())
+                return 443;
+            else
+                return 80;
+        }
+
+        public boolean isSecure() {
+            return uri.getScheme().equalsIgnoreCase("wss");
+        }
+
+        public Socket connect() throws IOException {
+            if (!isSecure())
+                return new Socket(host(), port());
+
+            SSLSocketFactory factory = (SSLSocketFactory) SSLSocketFactory.getDefault();
+            SSLSocket socket = (SSLSocket) factory.createSocket(host(), port());
+            return socket;
         }
     }
 
@@ -108,7 +126,7 @@ public class SimpleWebSocketClient extends Thread {
     }
 
     private void handShake(Request request) throws IOException {
-        socket = new Socket(request.host(), request.port());
+        socket = request.connect();
         in = socket.getInputStream();
         out = socket.getOutputStream();
 
