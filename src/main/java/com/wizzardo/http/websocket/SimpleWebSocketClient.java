@@ -1,6 +1,7 @@
 package com.wizzardo.http.websocket;
 
-import javax.net.ssl.*;
+import javax.net.ssl.SSLSocket;
+import javax.net.ssl.SSLSocketFactory;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -18,13 +19,14 @@ import java.util.Map;
  */
 public class SimpleWebSocketClient extends Thread {
     protected static final byte[] RNRN = "\r\n\r\n".getBytes(Charsets.UTF_8);
+    protected Request request;
     protected InputStream in;
     protected OutputStream out;
     protected byte[] buffer = new byte[1024];
     protected volatile int bufferOffset = 0;
-    protected volatile boolean closed = false;
     protected Message message = new Message();
     protected Socket socket;
+    protected volatile boolean connected;
 
     public static class Request {
         protected URI uri;
@@ -71,15 +73,13 @@ public class SimpleWebSocketClient extends Thread {
                 sb.append(param.getKey()).append('=').append(param.getValue());
             }
 
-            sb.append(" HTTP/1.1\r\n");
-            sb.append("Host: ").append(uri.getHost());
-            if (uri.getPort() != 80)
-                sb.append(":").append(uri.getPort());
-            sb.append("\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Key: x3JJHMbDL1EzLkh9GBhXDw==\r\nSec-WebSocket-Version: 13\r\n");
-            sb.append("Origin: http://").append(uri.getHost());
-            if (uri.getPort() != 80)
-                sb.append(":").append(uri.getPort());
-            sb.append("\r\n");
+            sb.append(" HTTP/1.1\r\n")
+                    .append("Host: ").append(uri.getHost()).append(":").append(port()).append("\r\n")
+                    .append("Upgrade: websocket\r\n")
+                    .append("Connection: Upgrade\r\n")
+                    .append("Sec-WebSocket-Key: x3JJHMbDL1EzLkh9GBhXDw==\r\n")
+                    .append("Sec-WebSocket-Version: 13\r\n")
+                    .append("Origin: http://").append(uri.getHost()).append(":").append(port()).append("\r\n");
 
             for (Map.Entry<String, String> header : headers.entrySet())
                 sb.append(header.getKey()).append(": ").append(header.getValue()).append("\r\n");
@@ -118,14 +118,14 @@ public class SimpleWebSocketClient extends Thread {
     }
 
     public SimpleWebSocketClient(Request request) throws URISyntaxException, IOException {
-        handShake(request);
+        this.request = request;
     }
 
     public SimpleWebSocketClient(String url) throws URISyntaxException, IOException {
-        handShake(new Request(url));
+        this(new Request(url));
     }
 
-    private void handShake(Request request) throws IOException {
+    protected synchronized void handShake(Request request) throws IOException {
         socket = request.connect();
         in = socket.getInputStream();
         out = socket.getOutputStream();
@@ -142,6 +142,7 @@ public class SimpleWebSocketClient extends Thread {
 
         System.out.println(new String(buffer, 0, response));
         bufferOffset = 0;
+        connected = true;
     }
 
     protected int search(byte[] src, int from, int to, byte[] needle) {
@@ -177,6 +178,9 @@ public class SimpleWebSocketClient extends Thread {
     }
 
     public void waitForMessage() throws IOException {
+        if (!connected)
+            handShake(request);
+
         while (!message.isComplete()) {
             if (!onFrame(readFrame()))
                 break;
@@ -193,7 +197,7 @@ public class SimpleWebSocketClient extends Thread {
             return true;
 
         if (frame.isClose()) {
-            closed = true;
+            connected = false;
             onClose();
             return false;
         }
@@ -225,15 +229,21 @@ public class SimpleWebSocketClient extends Thread {
     public void onMessage(Message message) {
     }
 
+    public void onConnect() {
+    }
+
     public void onClose() {
     }
 
     public boolean isClosed() {
-        return closed;
+        return !connected;
     }
 
 
     public void send(Message message) throws IOException {
+        if (!connected)
+            handShake(request);
+
         for (Frame frame : message.getFrames()) {
             frame.mask().write(out);
         }
@@ -248,6 +258,9 @@ public class SimpleWebSocketClient extends Thread {
     }
 
     public void send(Frame frame) throws IOException {
+        if (!connected)
+            handShake(request);
+
         frame.write(out);
     }
 
@@ -276,6 +289,6 @@ public class SimpleWebSocketClient extends Thread {
             onFrame(frame);
             frame = readFrame();
         }
-        closed = true;
+        connected = false;
     }
 }
