@@ -23,7 +23,7 @@ public class SimpleWebSocketClient extends Thread {
     protected InputStream in;
     protected OutputStream out;
     protected byte[] buffer = new byte[1024];
-    protected volatile int bufferOffset = 0;
+    protected volatile int limit = 0;
     protected Message message = new Message();
     protected Socket socket;
     protected volatile boolean connected;
@@ -134,14 +134,17 @@ public class SimpleWebSocketClient extends Thread {
         out.flush();
 
         int response = 0;
-        while ((bufferOffset += in.read(buffer, bufferOffset, buffer.length - bufferOffset)) != -1) {
+        while ((limit += in.read(buffer, limit, buffer.length - limit)) != -1) {
 //            System.out.println(new String(bytes, 0, r));
-            if ((response = search(buffer, 0, bufferOffset, RNRN)) >= 0)
+            if ((response = search(buffer, 0, limit, RNRN)) >= 0)
                 break;
         }
 
-        System.out.println(new String(buffer, 0, response));
-        bufferOffset = 0;
+//        System.out.println(new String(buffer, 0, response));
+        limit -= response - 4;
+        if (limit != 0)
+            System.arraycopy(buffer, response + 4, buffer, 0, limit);
+
         connected = true;
     }
 
@@ -207,14 +210,14 @@ public class SimpleWebSocketClient extends Thread {
     }
 
     private Frame readFrame() throws IOException {
-        while (!Frame.hasHeaders(buffer, 0, bufferOffset)) {
-            bufferOffset += in.read(buffer, bufferOffset, buffer.length - bufferOffset);
+        while (!Frame.hasHeaders(buffer, 0, limit)) {
+            limit += in.read(buffer, limit, buffer.length - limit);
         }
         Frame frame = new Frame();
-        int r = frame.read(buffer, 0, bufferOffset);
-        bufferOffset -= r;
-        if (bufferOffset != 0)
-            System.arraycopy(buffer, r, buffer, 0, bufferOffset);
+        int r = frame.read(buffer, 0, limit);
+        limit -= r;
+        if (limit != 0)
+            System.arraycopy(buffer, r, buffer, 0, limit);
 
         if (frame.isComplete())
             return frame;
