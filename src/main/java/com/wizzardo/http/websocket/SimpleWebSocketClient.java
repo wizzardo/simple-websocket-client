@@ -268,6 +268,9 @@ public class SimpleWebSocketClient extends Thread {
     }
 
     public void send(byte[] data, int offset, int length) throws IOException {
+        if (!connected)
+            handShake(request);
+
         new Frame(data, offset, length).mask().write(out);
     }
 
