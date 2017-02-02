@@ -125,7 +125,12 @@ public class SimpleWebSocketClient extends Thread {
         this(new Request(url));
     }
 
-    protected synchronized void handShake(Request request) throws IOException {
+    public void connectIfNot() throws IOException {
+        if (!connected)
+            handshake(request);
+    }
+
+    protected synchronized void handshake(Request request) throws IOException {
         socket = request.connect();
         in = socket.getInputStream();
         out = socket.getOutputStream();
@@ -181,8 +186,7 @@ public class SimpleWebSocketClient extends Thread {
     }
 
     public void waitForMessage() throws IOException {
-        if (!connected)
-            handShake(request);
+        connectIfNot();
 
         while (!message.isComplete()) {
             if (!onFrame(readFrame()))
@@ -244,8 +248,7 @@ public class SimpleWebSocketClient extends Thread {
 
 
     public void send(Message message) throws IOException {
-        if (!connected)
-            handShake(request);
+        connectIfNot();
 
         for (Frame frame : message.getFrames()) {
             frame.mask().write(out);
@@ -261,20 +264,20 @@ public class SimpleWebSocketClient extends Thread {
     }
 
     public void send(Frame frame) throws IOException {
-        if (!connected)
-            handShake(request);
+        connectIfNot();
 
         frame.write(out);
     }
 
     public void send(byte[] data, int offset, int length) throws IOException {
-        if (!connected)
-            handShake(request);
+        connectIfNot();
 
         new Frame(data, offset, length).mask().write(out);
     }
 
     public long ping() throws IOException {
+        connectIfNot();
+
         long time = System.currentTimeMillis();
         new Frame(Frame.OPCODE_PING).write(out);
         Frame frame = readFrame();
@@ -289,6 +292,9 @@ public class SimpleWebSocketClient extends Thread {
     }
 
     public void close() throws IOException {
+        if (!connected)
+            return;
+
         new Frame(Frame.OPCODE_CONNECTION_CLOSE).write(out);
         Frame frame = readFrame();
         while (!frame.isClose()) {
