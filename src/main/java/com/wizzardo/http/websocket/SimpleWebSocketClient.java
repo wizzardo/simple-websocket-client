@@ -181,6 +181,8 @@ public class SimpleWebSocketClient extends Thread {
                 waitForMessage();
             }
         } catch (IOException e) {
+            message = new Message();
+            limit = 0;
             e.printStackTrace();
         }
     }
@@ -215,7 +217,11 @@ public class SimpleWebSocketClient extends Thread {
 
     private Frame readFrame() throws IOException {
         while (!Frame.hasHeaders(buffer, 0, limit)) {
-            limit += in.read(buffer, limit, buffer.length - limit);
+            int read = in.read(buffer, limit, buffer.length - limit);
+            if (read == -1)
+                throw new IOException("Connection closed");
+
+            limit += read;
         }
         Frame frame = new Frame();
         int r = frame.read(buffer, 0, limit);
