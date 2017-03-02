@@ -176,14 +176,15 @@ public class SimpleWebSocketClient extends Thread {
 
     @Override
     public void run() {
-        try {
-            while (true) {
+        while (true) {
+            try {
                 waitForMessage();
+            } catch (IOException e) {
+                connected = false;
+                message = new Message();
+                limit = 0;
+                e.printStackTrace();
             }
-        } catch (IOException e) {
-            message = new Message();
-            limit = 0;
-            e.printStackTrace();
         }
     }
 
@@ -276,9 +277,7 @@ public class SimpleWebSocketClient extends Thread {
     }
 
     public void send(byte[] data, int offset, int length) throws IOException {
-        connectIfNot();
-
-        new Frame(data, offset, length).mask().write(out);
+        send(new Frame(data, offset, length).mask());
     }
 
     public long ping() throws IOException {
