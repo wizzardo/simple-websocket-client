@@ -27,6 +27,8 @@ public class SimpleWebSocketClient extends Thread {
     protected Message message = new Message();
     protected Socket socket;
     protected volatile boolean connected;
+    protected volatile long reconnectOnClosePause = -1;
+    protected volatile long reconnectOnErrorPause = -1;
 
     public static class Request {
         protected URI uri;
@@ -185,6 +187,13 @@ public class SimpleWebSocketClient extends Thread {
         while (true) {
             try {
                 waitForMessage();
+                if (isClosed()) {
+                    if (reconnectOnClosePause >= 0) {
+                        pause(reconnectOnClosePause);
+                    } else {
+                        break;
+                    }
+                }
             } catch (IOException e) {
                 connected = false;
                 try {
@@ -193,10 +202,38 @@ public class SimpleWebSocketClient extends Thread {
                 } catch (Exception ex) {
                     onError(ex);
                 }
-                message = new Message();
-                limit = 0;
+                if (reconnectOnErrorPause >= 0) {
+                    pause(reconnectOnErrorPause);
+                    message = new Message();
+                    limit = 0;
+                } else {
+                    break;
+                }
             }
         }
+    }
+
+    protected void pause(long ms) {
+        try {
+            Thread.sleep(ms);
+        } catch (InterruptedException ignored) {
+        }
+    }
+
+    public void setReconnectOnClosePause(long pause) {
+        reconnectOnClosePause = pause;
+    }
+
+    public void setReconnectOnErrorPause(long pause) {
+        reconnectOnErrorPause = pause;
+    }
+
+    public long getReconnectOnClosePause() {
+        return reconnectOnClosePause;
+    }
+
+    public long getReconnectOnErrorPause() {
+        return reconnectOnErrorPause;
     }
 
     public void waitForMessage() throws IOException {
@@ -209,7 +246,12 @@ public class SimpleWebSocketClient extends Thread {
         if (!message.isComplete())
             return;
 
-        onMessage(message);
+        try {
+            onMessage(message);
+        } catch (Exception e) {
+            onError(e);
+        }
+
         message = new Message();
     }
 
