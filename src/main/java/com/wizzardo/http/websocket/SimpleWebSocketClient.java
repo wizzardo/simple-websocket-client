@@ -146,6 +146,12 @@ public class SimpleWebSocketClient extends Thread {
         }
 
 //        System.out.println(new String(buffer, 0, response));
+        try {
+            onConnect();
+        } catch (Exception e) {
+            onError(e);
+        }
+
         limit -= response - 4;
         if (limit != 0)
             System.arraycopy(buffer, response + 4, buffer, 0, limit);
@@ -181,9 +187,14 @@ public class SimpleWebSocketClient extends Thread {
                 waitForMessage();
             } catch (IOException e) {
                 connected = false;
+                try {
+                    onError(e);
+                    onClose();
+                } catch (Exception ex) {
+                    onError(ex);
+                }
                 message = new Message();
                 limit = 0;
-                e.printStackTrace();
             }
         }
     }
@@ -249,6 +260,10 @@ public class SimpleWebSocketClient extends Thread {
     public void onClose() {
     }
 
+    public void onError(Exception e) {
+        e.printStackTrace();
+    }
+
     public boolean isClosed() {
         return !connected;
     }
@@ -307,5 +322,6 @@ public class SimpleWebSocketClient extends Thread {
             frame = readFrame();
         }
         connected = false;
+        onClose();
     }
 }
