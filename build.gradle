@@ -16,4 +16,6 @@ ext {
 apply from: 'gradle/sonatype.gradle'
 
 dependencies {
+
+    testCompile 'junit:junit:4.12'
 }
