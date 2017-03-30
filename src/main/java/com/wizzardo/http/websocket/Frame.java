@@ -151,6 +151,9 @@ class Frame {
                 complete = true;
             return r;
         } else {
+            if (offset + 2 >= length)
+                return 0;
+
             byte b = bytes[offset];
             finalFrame = (b & FINAL_FRAME) != 0;
             rsv1 = (byte) (b & RSV1);
@@ -163,10 +166,17 @@ class Frame {
             masked = (b & MASKED) != 0;
             this.length = b & LENGTH_FIRST_BYTE;
             int r = 2;
+            if (offset + r >= length)
+                return 0;
             if (this.length == 126) {
-                this.length = ((bytes[offset + 2] & 0xff) << 8) + (bytes[offset + 3] & 0xff);
                 r += 2;
+                if (offset + r >= length)
+                    return 0;
+                this.length = ((bytes[offset + 2] & 0xff) << 8) + (bytes[offset + 3] & 0xff);
             } else if (this.length == 127) {
+                r += 8;
+                if (offset + r >= length)
+                    return 0;
                 this.length =
 //                        ((long) (bytes[offset + 2] & 0xff) << 56)
 //                        + ((long) (bytes[offset + 3] & 0xff) << 48)
@@ -176,11 +186,12 @@ class Frame {
                                 + ((bytes[offset + 7] & 0xff) << 16)
                                 + ((bytes[offset + 8] & 0xff) << 8)
                                 + (bytes[offset + 9] & 0xff);
-                r += 8;
                 if (this.length > limit)
                     throw new IllegalStateException("Max frame length is exceeded");
             }
             if (masked) {
+                if (offset + r + 4 > length)
+                    return 0;
                 maskingKey = new byte[]{bytes[offset + r], bytes[offset + r + 1], bytes[offset + r + 2], bytes[offset + r + 3]};
                 r += 4;
             }
