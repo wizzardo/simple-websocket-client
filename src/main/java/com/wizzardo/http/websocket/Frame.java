@@ -151,7 +151,7 @@ class Frame {
                 complete = true;
             return r;
         } else {
-            if (offset + 2 >= length)
+            if (offset + 2 > length)
                 return 0;
 
             byte b = bytes[offset];
@@ -166,16 +166,14 @@ class Frame {
             masked = (b & MASKED) != 0;
             this.length = b & LENGTH_FIRST_BYTE;
             int r = 2;
-            if (offset + r >= length)
-                return 0;
             if (this.length == 126) {
                 r += 2;
-                if (offset + r >= length)
+                if (offset + r > length)
                     return 0;
                 this.length = ((bytes[offset + 2] & 0xff) << 8) + (bytes[offset + 3] & 0xff);
             } else if (this.length == 127) {
                 r += 8;
-                if (offset + r >= length)
+                if (offset + r > length)
                     return 0;
                 this.length =
 //                        ((long) (bytes[offset + 2] & 0xff) << 56)
