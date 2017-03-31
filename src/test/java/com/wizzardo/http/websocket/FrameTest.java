@@ -75,4 +75,19 @@ public class FrameTest {
         System.arraycopy(frame.getData(), frame.getOffset(), result, 0, frame.getLength());
         Assert.assertArrayEquals(data, result);
     }
+
+    @Test
+    public void test_close() throws IOException {
+        Frame frame = new Frame(Frame.OPCODE_CONNECTION_CLOSE);
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        frame.write(out);
+
+        byte[] bytes = out.toByteArray();
+        frame = new Frame();
+
+        int read = frame.read(bytes, 0, bytes.length);
+
+        Assert.assertEquals(bytes.length, read);
+        Assert.assertTrue(frame.isClose());
+    }
 }
