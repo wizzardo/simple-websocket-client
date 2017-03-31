@@ -154,7 +154,7 @@ public class SimpleWebSocketClient extends Thread {
             onError(e);
         }
 
-        limit -= response - 4;
+        limit -= response + 4;
         if (limit != 0)
             System.arraycopy(buffer, response + 4, buffer, 0, limit);
 
