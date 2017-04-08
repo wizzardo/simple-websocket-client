@@ -128,8 +128,24 @@ public class SimpleWebSocketClient extends Thread {
     }
 
     public void connectIfNot() throws IOException {
-        if (!connected)
-            handshake(request);
+        while (true)
+            try {
+                if (!connected)
+                    handshake(request);
+            } catch (IOException e) {
+                connected = false;
+                try {
+                    onError(e);
+                    onClose();
+                } catch (Exception ex) {
+                    onError(ex);
+                }
+                if (reconnectOnErrorPause >= 0) {
+                    pause(reconnectOnErrorPause);
+                } else {
+                    break;
+                }
+            }
     }
 
     protected synchronized void handshake(Request request) throws IOException {
@@ -140,6 +156,8 @@ public class SimpleWebSocketClient extends Thread {
         out.write(request.build().getBytes());
         out.flush();
 
+        message = new Message();
+        limit = 0;
         int response = 0;
         while ((limit += in.read(buffer, limit, buffer.length - limit)) != -1) {
 //            System.out.println(new String(bytes, 0, r));
@@ -204,8 +222,6 @@ public class SimpleWebSocketClient extends Thread {
                 }
                 if (reconnectOnErrorPause >= 0) {
                     pause(reconnectOnErrorPause);
-                    message = new Message();
-                    limit = 0;
                 } else {
                     break;
                 }
