@@ -128,10 +128,9 @@ public class SimpleWebSocketClient extends Thread {
     }
 
     public void connectIfNot() throws IOException {
-        while (true)
+        while (!connected)
             try {
-                if (!connected)
-                    handshake(request);
+                handshake(request);
             } catch (IOException e) {
                 connected = false;
                 try {
