@@ -9,7 +9,7 @@ import java.util.Random;
  * @author: wizzardo
  * Date: 06.10.14
  */
-class Frame {
+public class Frame {
     static final int MAX_HEADER_LENGTH = 14;
 
     static final int FINAL_FRAME = 1 << 7;
@@ -26,19 +26,19 @@ class Frame {
     static final byte OPCODE_PONG = 10;
     static final int LENGTH_FIRST_BYTE = 0x7f;
 
-    private static final Random RANDOM = new Random();
+    protected static final Random RANDOM = new Random();
 
-    private boolean finalFrame = true;
-    private byte rsv1, rsv2, rsv3;
-    private byte opcode = OPCODE_TEXT_FRAME;
-    private boolean masked;
-    private int length;
-    private byte[] maskingKey;
-    private boolean complete;
-    private byte[] data;
-    private int offset;
-    private int read;
-    private boolean readHeaders = false;
+    protected boolean finalFrame = true;
+    protected byte rsv1, rsv2, rsv3;
+    protected byte opcode = OPCODE_TEXT_FRAME;
+    protected boolean masked;
+    protected int length;
+    protected byte[] maskingKey;
+    protected boolean complete;
+    protected byte[] data;
+    protected int offset;
+    protected int read;
+    protected boolean readHeaders = false;
     protected int limit;
 
     public Frame(byte[] data, int offset, int length) {
@@ -86,7 +86,7 @@ class Frame {
         out.write(data, headerOffset, length + MAX_HEADER_LENGTH - headerOffset);
     }
 
-    private void mask(byte[] data, byte[] mask, int offset, int length) {
+    protected void mask(byte[] data, byte[] mask, int offset, int length) {
         for (int i = offset; i < length + offset; i++) {
             data[i] = (byte) (data[i] ^ mask[(i - offset) % 4]);
         }
@@ -112,11 +112,11 @@ class Frame {
         return this;
     }
 
-    private byte[] intToBytes(int i) {
+    protected byte[] intToBytes(int i) {
         return intToBytes(i, new byte[4], 0);
     }
 
-    private byte[] intToBytes(int i, byte[] bytes, int offset) {
+    protected byte[] intToBytes(int i, byte[] bytes, int offset) {
         bytes[offset] = (byte) ((i >> 24) & 0xff);
         bytes[offset + 1] = (byte) ((i >> 16) & 0xff);
         bytes[offset + 2] = (byte) ((i >> 8) & 0xff);
@@ -224,7 +224,7 @@ class Frame {
         return false;
     }
 
-    private int calculateHeadersSize(int dataLength, boolean masked) {
+    protected int calculateHeadersSize(int dataLength, boolean masked) {
         if (dataLength <= 125)
             return 2 + (masked ? 4 : 0);
         else if (dataLength < 65536)

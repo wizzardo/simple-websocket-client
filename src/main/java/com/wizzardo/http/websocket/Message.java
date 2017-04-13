@@ -35,7 +35,7 @@ public class Message {
         return frame.isFinalFrame() && frame.isComplete();
     }
 
-    void add(Frame frame) {
+    public void add(Frame frame) {
         if (!frames.isEmpty())
             frames.get(frames.size() - 1).setIsFinalFrame(false);
         frames.add(frame);
