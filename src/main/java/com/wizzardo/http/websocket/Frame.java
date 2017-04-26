@@ -10,21 +10,21 @@ import java.util.Random;
  * Date: 06.10.14
  */
 public class Frame {
-    static final int MAX_HEADER_LENGTH = 14;
+    public static final int MAX_HEADER_LENGTH = 14;
 
-    static final int FINAL_FRAME = 1 << 7;
-    static final int MASKED = 1 << 7;
-    static final int RSV1 = 1 << 6;
-    static final int RSV2 = 1 << 5;
-    static final int RSV3 = 1 << 4;
-    static final int OPCODE = 0x0f;
-    static final byte OPCODE_CONTINUATION_FRAME = 0;
-    static final byte OPCODE_TEXT_FRAME = 1;
-    static final byte OPCODE_BINARY_FRAME = 2;
-    static final byte OPCODE_CONNECTION_CLOSE = 8;
-    static final byte OPCODE_PING = 9;
-    static final byte OPCODE_PONG = 10;
-    static final int LENGTH_FIRST_BYTE = 0x7f;
+    public static final int FINAL_FRAME = 1 << 7;
+    public static final int MASKED = 1 << 7;
+    public static final int RSV1 = 1 << 6;
+    public static final int RSV2 = 1 << 5;
+    public static final int RSV3 = 1 << 4;
+    public static final int OPCODE = 0x0f;
+    public static final byte OPCODE_CONTINUATION_FRAME = 0;
+    public static final byte OPCODE_TEXT_FRAME = 1;
+    public static final byte OPCODE_BINARY_FRAME = 2;
+    public static final byte OPCODE_CONNECTION_CLOSE = 8;
+    public static final byte OPCODE_PING = 9;
+    public static final byte OPCODE_PONG = 10;
+    public static final int LENGTH_FIRST_BYTE = 0x7f;
 
     protected static final Random RANDOM = new Random();
 
