@@ -158,11 +158,16 @@ public class SimpleWebSocketClient extends Thread {
         message = new Message();
         limit = 0;
         int response = 0;
-        while ((limit += in.read(buffer, limit, buffer.length - limit)) != -1) {
+        int read = 0;
+        while ((read = in.read(buffer, limit, buffer.length - limit)) != -1) {
 //            System.out.println(new String(bytes, 0, r));
+            limit += read;
             if ((response = search(buffer, 0, limit, RNRN)) >= 0)
                 break;
         }
+
+        if (response == -1)
+            throw new IOException("No response");
 
 //        System.out.println(new String(buffer, 0, response));
         try {
@@ -171,9 +176,19 @@ public class SimpleWebSocketClient extends Thread {
             onError(e);
         }
 
-        limit -= response + 4;
-        if (limit != 0)
-            System.arraycopy(buffer, response + 4, buffer, 0, limit);
+        int limit = this.limit - (response + 4);
+        try {
+            if (limit != 0)
+                System.arraycopy(buffer, response + 4, buffer, 0, limit);
+
+            this.limit = limit;
+        } catch (Exception e) {
+            System.out.println("limit: " + limit);
+            System.out.println("response length: " + response);
+            System.out.println("failed to copy data from " + (response + 4) + " and length " + limit);
+            System.out.println(new String(buffer, 0, this.limit));
+            throw new IOException("Empty or wrong response", e);
+        }
 
         connected = true;
     }
@@ -201,31 +216,21 @@ public class SimpleWebSocketClient extends Thread {
 
     @Override
     public void run() {
-        while (true) {
-            try {
-                waitForMessage();
-                if (isClosed()) {
-                    if (reconnectOnClosePause >= 0) {
-                        pause(reconnectOnClosePause);
-                    } else {
-                        break;
+        doWithReconnects(new IORunnable() {
+            @Override
+            public void run() throws IOException {
+                while (true) {
+                    waitForMessage();
+                    if (isClosed()) {
+                        if (reconnectOnClosePause >= 0) {
+                            pause(reconnectOnClosePause);
+                        } else {
+                            break;
+                        }
                     }
                 }
-            } catch (IOException e) {
-                connected = false;
-                try {
-                    onError(e);
-                    onClose();
-                } catch (Exception ex) {
-                    onError(ex);
-                }
-                if (reconnectOnErrorPause >= 0) {
-                    pause(reconnectOnErrorPause);
-                } else {
-                    break;
-                }
             }
-        }
+        });
     }
 
     protected void pause(long ms) {
@@ -326,11 +331,41 @@ public class SimpleWebSocketClient extends Thread {
     }
 
 
-    public void send(Message message) throws IOException {
-        connectIfNot();
+    public void send(final Message message) throws IOException {
+        doWithReconnects(new IORunnable() {
+            @Override
+            public void run() throws IOException {
+                for (Frame frame : message.getFrames()) {
+                    frame.mask().write(out);
+                }
+            }
+        });
+    }
 
-        for (Frame frame : message.getFrames()) {
-            frame.mask().write(out);
+    protected static interface IORunnable {
+        void run() throws IOException;
+    }
+
+    protected void doWithReconnects(IORunnable runnable) {
+        while (true) {
+            try {
+                connectIfNot();
+                runnable.run();
+                break;
+            } catch (IOException e) {
+                connected = false;
+                try {
+                    onError(e);
+                    onClose();
+                } catch (Exception ex) {
+                    onError(ex);
+                }
+                if (reconnectOnErrorPause >= 0) {
+                    pause(reconnectOnErrorPause);
+                } else {
+                    break;
+                }
+            }
         }
     }
 
@@ -342,10 +377,13 @@ public class SimpleWebSocketClient extends Thread {
         send(data, 0, data.length);
     }
 
-    public void send(Frame frame) throws IOException {
-        connectIfNot();
-
-        frame.write(out);
+    public void send(final Frame frame) throws IOException {
+        doWithReconnects(new IORunnable() {
+            @Override
+            public void run() throws IOException {
+                frame.write(out);
+            }
+        });
     }
 
     public void send(byte[] data, int offset, int length) throws IOException {
@@ -353,10 +391,8 @@ public class SimpleWebSocketClient extends Thread {
     }
 
     public long ping() throws IOException {
-        connectIfNot();
-
         long time = System.currentTimeMillis();
-        new Frame(Frame.OPCODE_PING).write(out);
+        send(new Frame(Frame.OPCODE_PING));
         Frame frame = readFrame();
         while (!frame.isPong()) {
             onFrame(frame);
@@ -372,7 +408,7 @@ public class SimpleWebSocketClient extends Thread {
         if (!connected)
             return;
 
-        new Frame(Frame.OPCODE_CONNECTION_CLOSE).write(out);
+        send(new Frame(Frame.OPCODE_CONNECTION_CLOSE));
         Frame frame = readFrame();
         while (!frame.isClose()) {
             onFrame(frame);
