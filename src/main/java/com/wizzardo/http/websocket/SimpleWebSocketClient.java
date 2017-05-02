@@ -127,7 +127,7 @@ public class SimpleWebSocketClient extends Thread {
         this(new Request(url));
     }
 
-    public void connectIfNot() throws IOException {
+    public boolean connectIfNot() throws IOException {
         while (!connected)
             try {
                 handshake(request);
@@ -145,6 +145,8 @@ public class SimpleWebSocketClient extends Thread {
                     break;
                 }
             }
+
+        return connected;
     }
 
     protected synchronized void handshake(Request request) throws IOException {
@@ -257,7 +259,8 @@ public class SimpleWebSocketClient extends Thread {
     }
 
     public void waitForMessage() throws IOException {
-        connectIfNot();
+        if (!connectIfNot())
+            return;
 
         while (!message.isComplete()) {
             if (!onFrame(readFrame()))
@@ -349,7 +352,9 @@ public class SimpleWebSocketClient extends Thread {
     protected void doWithReconnects(IORunnable runnable) {
         while (true) {
             try {
-                connectIfNot();
+                if (!connectIfNot())
+                    return;
+
                 runnable.run();
                 break;
             } catch (IOException e) {
