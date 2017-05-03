@@ -151,6 +151,8 @@ public class SimpleWebSocketClient extends Thread {
 
     protected synchronized void handshake(Request request) throws IOException {
         socket = request.connect();
+        socket.setTcpNoDelay(true);
+
         in = socket.getInputStream();
         out = socket.getOutputStream();
 
@@ -341,6 +343,7 @@ public class SimpleWebSocketClient extends Thread {
                 for (Frame frame : message.getFrames()) {
                     frame.mask().write(out);
                 }
+                out.flush();
             }
         });
     }
@@ -387,6 +390,8 @@ public class SimpleWebSocketClient extends Thread {
             @Override
             public void run() throws IOException {
                 frame.write(out);
+                if (frame.isFinalFrame())
+                    out.flush();
             }
         });
     }
