@@ -36,8 +36,10 @@ public class Message {
     }
 
     public void add(Frame frame) {
-        if (!frames.isEmpty())
+        if (!frames.isEmpty()) {
             frames.get(frames.size() - 1).setIsFinalFrame(false);
+            frame.setOpcode(Frame.OPCODE_CONTINUATION_FRAME);
+        }
         frames.add(frame);
     }
 
