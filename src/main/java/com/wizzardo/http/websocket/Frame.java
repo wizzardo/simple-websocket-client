@@ -27,6 +27,12 @@ public class Frame {
     public static final int LENGTH_FIRST_BYTE = 0x7f;
 
     protected static final Random RANDOM = new Random();
+    protected static final ByteArraySupplier DEFAULT_BYTE_ARRAY_SUPPLIER = new ByteArraySupplier() {
+        @Override
+        public byte[] supply(int minLength) {
+            return new byte[minLength];
+        }
+    };
 
     protected boolean finalFrame = true;
     protected byte rsv1, rsv2, rsv3;
@@ -40,21 +46,38 @@ public class Frame {
     protected int read;
     protected boolean readHeaders = false;
     protected int limit;
+    protected ByteArraySupplier byteArraySupplier;
 
     public Frame(byte[] data, int offset, int length) {
-        byte[] bytes = new byte[MAX_HEADER_LENGTH + length];
-        System.arraycopy(data, offset, bytes, MAX_HEADER_LENGTH, length);
-        this.data = bytes;
-        this.offset = MAX_HEADER_LENGTH;
-        this.length = length;
+        this(data, offset, length, true);
+    }
+
+    public Frame(byte[] data, int offset, int length, boolean copy) {
+        if (copy) {
+            byte[] bytes = new byte[MAX_HEADER_LENGTH + length];
+            System.arraycopy(data, offset, bytes, MAX_HEADER_LENGTH, length);
+            this.data = bytes;
+            this.offset = MAX_HEADER_LENGTH;
+            this.length = length;
+        } else {
+            if (offset < MAX_HEADER_LENGTH)
+                throw new IllegalArgumentException("Offset should be >= MAX_HEADER_LENGTH (" + MAX_HEADER_LENGTH + ")");
+
+            this.data = data;
+            this.offset = offset;
+            this.length = length;
+        }
+        byteArraySupplier = DEFAULT_BYTE_ARRAY_SUPPLIER;
     }
 
     public Frame(byte opCode) {
         this.opcode = opCode;
+        byteArraySupplier = DEFAULT_BYTE_ARRAY_SUPPLIER;
     }
 
     public Frame(int limit) {
         this.limit = limit;
+        byteArraySupplier = DEFAULT_BYTE_ARRAY_SUPPLIER;
     }
 
     public Frame() {
@@ -78,9 +101,19 @@ public class Frame {
         return length;
     }
 
+    public void setByteArraySupplier(ByteArraySupplier byteArraySupplier) {
+        this.byteArraySupplier = byteArraySupplier;
+    }
+
+    public ByteArraySupplier getByteArraySupplier() {
+        return byteArraySupplier;
+    }
+
     public void write(OutputStream out) throws IOException {
-        if (data == null)
+        if (data == null) {
             data = new byte[MAX_HEADER_LENGTH];
+            offset = MAX_HEADER_LENGTH;
+        }
 
         int headerOffset = getHeader(data);
         out.write(data, headerOffset, length + MAX_HEADER_LENGTH - headerOffset);
@@ -196,7 +229,7 @@ public class Frame {
 
             complete = length - r >= this.length;
 
-            data = new byte[MAX_HEADER_LENGTH + this.length];
+            data = byteArraySupplier.supply(MAX_HEADER_LENGTH + this.length);
             read = Math.min(length - r, this.length);
             System.arraycopy(bytes, r, data, MAX_HEADER_LENGTH, read);
             this.offset = MAX_HEADER_LENGTH;
@@ -234,7 +267,7 @@ public class Frame {
     }
 
     public int getHeader(byte[] header) {
-        int headerOffset = MAX_HEADER_LENGTH - calculateHeadersSize(length, masked);
+        int headerOffset = offset - calculateHeadersSize(length, masked);
         int value = opcode;
         if (finalFrame)
             value |= FINAL_FRAME;
@@ -264,10 +297,10 @@ public class Frame {
         }
 
         if (masked) {
-            header[MAX_HEADER_LENGTH - 4] = maskingKey[0];
-            header[MAX_HEADER_LENGTH - 3] = maskingKey[1];
-            header[MAX_HEADER_LENGTH - 2] = maskingKey[2];
-            header[MAX_HEADER_LENGTH - 1] = maskingKey[3];
+            header[offset - 4] = maskingKey[0];
+            header[offset - 3] = maskingKey[1];
+            header[offset - 2] = maskingKey[2];
+            header[offset - 1] = maskingKey[3];
         }
 
         return headerOffset;
@@ -298,8 +331,10 @@ public class Frame {
     }
 
     public byte[] getFrameBytes() {
-        if (data == null)
+        if (data == null) {
             data = new byte[MAX_HEADER_LENGTH];
+            offset = MAX_HEADER_LENGTH;
+        }
 
         getHeader(data);
 
