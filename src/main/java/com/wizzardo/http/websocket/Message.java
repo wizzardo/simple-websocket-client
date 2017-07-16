@@ -61,19 +61,26 @@ public class Message {
     }
 
     public byte[] asBytes() {
-        int length = 0;
-        for (Frame frame : frames)
-            length += frame.getLength();
+        byte[] data = new byte[getBytesLength()];
+        asBytes(data);
+        return data;
+    }
 
+    public int asBytes(byte[] result) {
         int offset = 0;
-        byte[] data = new byte[length];
-
         for (Frame frame : frames) {
-            System.arraycopy(frame.getData(), frame.getOffset(), data, offset, frame.getLength());
+            System.arraycopy(frame.getData(), frame.getOffset(), result, offset, frame.getLength());
             offset += frame.getLength();
         }
 
-        return data;
+        return offset;
+    }
+
+    public int getBytesLength() {
+        int length = 0;
+        for (Frame frame : frames)
+            length += frame.getLength();
+        return length;
     }
 
     List<Frame> getFrames() {
