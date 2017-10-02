@@ -10,7 +10,7 @@ import static com.wizzardo.http.websocket.Charsets.UTF_8;
  * Date: 06.10.14
  */
 public class Message {
-    private List<Frame> frames = new ArrayList<Frame>();
+    protected List<Frame> frames = new ArrayList<Frame>();
 
     public Message() {
     }
@@ -25,6 +25,10 @@ public class Message {
 
     public Message(byte[] message, int offset, int length) {
         append(message, offset, length);
+    }
+
+    public void clear() {
+        frames.clear();
     }
 
     public boolean isComplete() {
