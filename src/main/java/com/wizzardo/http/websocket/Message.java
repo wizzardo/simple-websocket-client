@@ -47,6 +47,14 @@ public class Message {
         frames.add(frame);
     }
 
+    public boolean isTextMessage() {
+        return frames.size() > 0 && frames.get(frames.size() - 1).opcode == Frame.OPCODE_TEXT_FRAME;
+    }
+
+    public boolean isBinaryMessage() {
+        return frames.size() > 0 && frames.get(frames.size() - 1).opcode == Frame.OPCODE_BINARY_FRAME;
+    }
+
     public Message append(String s) {
         return append(s.getBytes(UTF_8));
     }
@@ -57,6 +65,11 @@ public class Message {
 
     public Message append(byte[] bytes, int offset, int length) {
         add(new Frame(bytes, offset, length));
+        return this;
+    }
+
+    public Message append(byte[] bytes, int offset, int length, byte opcode) {
+        add(new Frame(opcode, bytes, offset, length));
         return this;
     }
 
