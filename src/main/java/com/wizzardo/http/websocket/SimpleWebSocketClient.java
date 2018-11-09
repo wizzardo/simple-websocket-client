@@ -427,4 +427,19 @@ public class SimpleWebSocketClient extends Thread {
         connected = false;
         onClose();
     }
+
+    public void close(int status, String message) throws IOException {
+        if (!connected)
+            return;
+
+        send(Frame.closeFrame(status, message));
+
+        Frame frame = readFrame();
+        while (!frame.isClose()) {
+            onFrame(frame);
+            frame = readFrame();
+        }
+        connected = false;
+        onClose();
+    }
 }

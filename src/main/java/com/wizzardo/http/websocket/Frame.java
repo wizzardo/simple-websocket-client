@@ -53,6 +53,14 @@ public class Frame {
     }
 
     public Frame(byte[] data, int offset, int length, boolean copy) {
+        this(OPCODE_TEXT_FRAME, data, offset, length, copy);
+    }
+
+    public Frame(byte opcode, byte[] data, int offset, int length) {
+        this(opcode, data, offset, length, true);
+    }
+
+    public Frame(byte opcode, byte[] data, int offset, int length, boolean copy) {
         if (copy) {
             byte[] bytes = new byte[MAX_HEADER_LENGTH + length];
             System.arraycopy(data, offset, bytes, MAX_HEADER_LENGTH, length);
@@ -67,6 +75,7 @@ public class Frame {
             this.offset = offset;
             this.length = length;
         }
+        this.opcode = opcode;
         byteArraySupplier = DEFAULT_BYTE_ARRAY_SUPPLIER;
     }
 
@@ -82,6 +91,29 @@ public class Frame {
 
     public Frame() {
         this(Integer.MAX_VALUE);
+    }
+
+    public static Frame closeFrame(int status) {
+        return closeFrame(status, null);
+    }
+
+    public static Frame closeFrame(int status, String message) {
+        if (status < 1000 || status >= 5000)
+            throw new IllegalArgumentException("Status must be > 999 and < 5000");
+
+        byte[] data;
+        if (message != null) {
+            byte[] bytes = message.getBytes(Charsets.UTF_8);
+            data = new byte[bytes.length + 2 + MAX_HEADER_LENGTH];
+            System.arraycopy(bytes, 0, data, 2 + MAX_HEADER_LENGTH, bytes.length);
+        } else {
+            data = new byte[2 + MAX_HEADER_LENGTH];
+        }
+
+        data[0 + MAX_HEADER_LENGTH] = (byte) ((status >> 8) & 0xff);
+        data[1 + MAX_HEADER_LENGTH] = (byte) (status & 0xff);
+
+        return new Frame(Frame.OPCODE_CONNECTION_CLOSE, data, MAX_HEADER_LENGTH, data.length - MAX_HEADER_LENGTH, false);
     }
 
     @Override
