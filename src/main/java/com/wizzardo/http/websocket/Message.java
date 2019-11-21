@@ -35,24 +35,36 @@ public class Message {
         if (frames.isEmpty())
             return false;
 
-        Frame frame = frames.get(frames.size() - 1);
+        Frame frame = last();
         return frame.isFinalFrame() && frame.isComplete();
     }
 
     public void add(Frame frame) {
         if (!frames.isEmpty()) {
-            frames.get(frames.size() - 1).setIsFinalFrame(false);
+            last().setIsFinalFrame(false);
             frame.setOpcode(Frame.OPCODE_CONTINUATION_FRAME);
         }
         frames.add(frame);
     }
 
+    public Frame get(int i) {
+        return frames.get(i);
+    }
+
+    public Frame last() {
+        return get(size() - 1);
+    }
+
+    public int size() {
+        return frames.size();
+    }
+
     public boolean isTextMessage() {
-        return frames.size() > 0 && frames.get(frames.size() - 1).opcode == Frame.OPCODE_TEXT_FRAME;
+        return size() > 0 && last().opcode == Frame.OPCODE_TEXT_FRAME;
     }
 
     public boolean isBinaryMessage() {
-        return frames.size() > 0 && frames.get(frames.size() - 1).opcode == Frame.OPCODE_BINARY_FRAME;
+        return size() > 0 && last().opcode == Frame.OPCODE_BINARY_FRAME;
     }
 
     public Message append(String s) {
@@ -86,10 +98,8 @@ public class Message {
     public int asBytes(byte[] result) {
         int offset = 0;
         for (Frame frame : frames) {
-            System.arraycopy(frame.getData(), frame.getOffset(), result, offset, frame.getLength());
-            offset += frame.getLength();
+            offset = frame.asBytes(result, offset);
         }
-
         return offset;
     }
 
@@ -98,6 +108,10 @@ public class Message {
         for (Frame frame : frames)
             length += frame.getLength();
         return length;
+    }
+
+    public int length() {
+        return getBytesLength();
     }
 
     List<Frame> getFrames() {

@@ -5,6 +5,8 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.Random;
 
+import static com.wizzardo.http.websocket.Charsets.UTF_8;
+
 /**
  * @author: wizzardo
  * Date: 06.10.14
@@ -131,6 +133,25 @@ public class Frame {
 
     public int getLength() {
         return length;
+    }
+
+    public String asString() {
+        return new String(asBytes(), UTF_8);
+    }
+
+    public byte[] asBytes() {
+        byte[] data = new byte[length];
+        asBytes(data);
+        return data;
+    }
+
+    public int asBytes(byte[] result) {
+        return asBytes(result, 0);
+    }
+
+    public int asBytes(byte[] result, int offset) {
+        System.arraycopy(data, this.offset, result, offset, length);
+        return offset + length;
     }
 
     public void setByteArraySupplier(ByteArraySupplier byteArraySupplier) {
