@@ -6,6 +6,10 @@ if (!project.hasProperty("ossrhUsername"))
 if (!project.hasProperty("ossrhPassword"))
     ext.ossrhPassword = ""
 
+javadoc {
+    options.tags = [ "author:" ]
+}
+
 task javadocJar(type: Jar) {
     classifier = 'javadoc'
     from javadoc
