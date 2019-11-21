@@ -27,6 +27,7 @@ public class SimpleWebSocketClient extends Thread {
     protected Message message = new Message();
     protected Socket socket;
     protected volatile boolean connected;
+    protected volatile boolean running = true;
     protected volatile long reconnectOnClosePause = -1;
     protected volatile long reconnectOnErrorPause = -1;
 
@@ -128,7 +129,7 @@ public class SimpleWebSocketClient extends Thread {
     }
 
     public boolean connectIfNot() throws IOException {
-        while (!connected)
+        while (running && !connected)
             try {
                 handshake(request);
             } catch (IOException e) {
@@ -146,7 +147,7 @@ public class SimpleWebSocketClient extends Thread {
                 }
             }
 
-        return connected;
+        return running && connected;
     }
 
     protected synchronized void handshake(Request request) throws IOException {
@@ -223,9 +224,9 @@ public class SimpleWebSocketClient extends Thread {
         doWithReconnects(new IORunnable() {
             @Override
             public void run() throws IOException {
-                while (true) {
+                while (running) {
                     waitForMessage();
-                    if (isClosed()) {
+                    if (isClosed() && running) {
                         if (reconnectOnClosePause >= 0) {
                             pause(reconnectOnClosePause);
                         } else {
@@ -353,7 +354,7 @@ public class SimpleWebSocketClient extends Thread {
     }
 
     protected void doWithReconnects(IORunnable runnable) {
-        while (true) {
+        while (running) {
             try {
                 if (!connectIfNot())
                     return;
@@ -419,6 +420,7 @@ public class SimpleWebSocketClient extends Thread {
             return;
 
         send(new Frame(Frame.OPCODE_CONNECTION_CLOSE));
+        running = false;
         Frame frame = readFrame();
         while (!frame.isClose()) {
             onFrame(frame);
@@ -429,6 +431,7 @@ public class SimpleWebSocketClient extends Thread {
     }
 
     public void close(int status, String message) throws IOException {
+        running = false;
         if (!connected)
             return;
 
