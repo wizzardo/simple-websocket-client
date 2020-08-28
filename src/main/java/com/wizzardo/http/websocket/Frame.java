@@ -271,7 +271,7 @@ public class Frame {
                                 + ((bytes[offset + 8] & 0xff) << 8)
                                 + (bytes[offset + 9] & 0xff);
                 if (this.length > limit)
-                    throw new IllegalStateException("Max frame length is exceeded");
+                    throw new IllegalStateException("Max frame length is exceeded. " + this.length + ">" + limit);
             }
             if (masked) {
                 if (offset + r + 4 > length)
