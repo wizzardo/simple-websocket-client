@@ -1,14 +1,14 @@
 apply plugin: 'java'
 
 repositories {
-    jcenter()
+    mavenCentral()
 }
 
-sourceCompatibility = 1.6
-targetCompatibility = 1.6
+sourceCompatibility = 1.8
+targetCompatibility = 1.8
 
 group = 'com.wizzardo'
-version = '0.2'
+version = '0.3-SNAPSHOT'
 
 ext {
     descriptionString = 'Simple web-socket client'
