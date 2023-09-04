@@ -132,7 +132,7 @@ public class SimpleWebSocketClient extends Thread {
         while (running && !connected)
             try {
                 handshake(request);
-            } catch (IOException e) {
+            } catch (Exception e) {
                 connected = false;
                 try {
                     onError(e);
