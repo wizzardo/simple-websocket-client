@@ -212,7 +212,10 @@ public class Frame {
 
     public void read(InputStream in) throws IOException {
         while (read != length) {
-            read += in.read(data, offset + read, (length - read));
+            int r = in.read(data, offset + read, (length - read));
+            if (r == -1)
+                throw new IOException("Unexpected end of stream");
+            read += r;
         }
         complete = true;
     }
